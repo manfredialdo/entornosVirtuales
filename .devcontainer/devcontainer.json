@@ -1,29 +1,31 @@
 {
-  "name": "mi multientorno WordPress ",
+  "name": "WordPress Single Container Env",
   
-  // Le indicamos que apunte al archivo docker-compose
-  "dockerComposeFile": "docker-compose.yml",
-  
-  // El servicio principal con el que interactúa VS Code
-  "service": "wordpress",
-  
-  // Carpeta donde se montará nuestro código dentro del contenedor
-  "workspaceFolder": "/var/www/html",
+  // 1. Usamos una imagen universal de Codespaces que TIENE GIT y herramientas de Linux nativas
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
 
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-azuretools.vscode-docker" // Para administrar los contenedores visualmente
-      ]
+  // 2. Inyectamos MySQL de forma nativa como una "Feature" en segundo plano
+  "features": {
+    "ghcr.io/devcontainers/features/mysql:1": {
+      "version": "8.0",
+      "databaseName": "wordpress_db",
+      "dbUser": "wp_user",
+      "dbPassword": "wp_password"
     }
   },
 
-  // Exponemos el puerto de WordPress (8080)
+  // 3. Instalamos y configuramos WordPress en la máquina principal al iniciar
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y php-cli php-mysql && mkdir -p wordpress && cd wordpress && curl -O https://wordpress.org/latest.tar.gz && tar -xzf latest.tar.gz --strip-components=1 && rm latest.tar.gz",
+  
+  // 4. Encendemos el servidor web nativo de PHP apuntando a la carpeta de WordPress
+  "postStartCommand": "cd wordpress && php -S 0.0.0.0:8080 &",
+
+  // 5. Mapeamos y abrimos el puerto automáticamente
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
-      "label": "Sitio WordPress",
-      "onAutoForward": "openPreview" 
+      "label": "Tu Sitio WordPress",
+      "onAutoForward": "openPreview"
     }
   }
 }
