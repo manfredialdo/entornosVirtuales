@@ -1,31 +1,32 @@
 {
-  "name": "WordPress Single Container Env",
+  "name": "WordPress Master Env (Apache Nativo)",
   
-  // 1. Usamos una imagen universal de Codespaces que TIENE GIT y herramientas de Linux nativas
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  // 1. Usamos la imagen oficial de PHP recomendada en la documentación
+  "image": "mcr.microsoft.com/devcontainers/php:1-8.2-bullseye",
 
-  // 2. Inyectamos MySQL de forma nativa como una "Feature" en segundo plano
-  "features": {
-    "ghcr.io/devcontainers/features/mysql:1": {
-      "version": "8.0",
-      "databaseName": "wordpress_db",
-      "dbUser": "wp_user",
-      "dbPassword": "wp_password"
+  // 2. Mapeamos el puerto 8080 para visualizar WordPress de forma automática
+  "forwardPorts": [
+    8080
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Tu WordPress",
+      "onAutoForward": "openPreview"
     }
   },
 
-  // 3. Instalamos y configuramos WordPress en la máquina principal al iniciar
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y php-cli php-mysql && mkdir -p wordpress && cd wordpress && curl -O https://wordpress.org/latest.tar.gz && tar -xzf latest.tar.gz --strip-components=1 && rm latest.tar.gz",
-  
-  // 4. Encendemos el servidor web nativo de PHP apuntando a la carpeta de WordPress
-  "postStartCommand": "cd wordpress && php -S 0.0.0.0:8080 &",
+  // 3. Instalamos las herramientas necesarias e inicializamos la base de datos y la descarga de WP
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y mariadb-server php-mysql php-xml php-mbstring php-curl && sudo service mariadb start && sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS wordpress_db; CREATE USER IF NOT EXISTS 'wp_user'@'localhost' IDENTIFIED BY 'wp_password'; GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost'; FLUSH PRIVILEGES;\" && if [ ! -f wp-config-sample.php ]; then curl -O https://wordpress.org/latest.tar.gz && tar -xzf latest.tar.gz --strip-components=1 && rm latest.tar.gz; fi && sudo sed -i 's/Listen 80$/Listen 8080/' /etc/apache2/ports.conf && sudo sed -i 's/<VirtualHost \\* :80>/<VirtualHost \\* :8080>/' /etc/apache2/sites-enabled/000-default.conf",
 
-  // 5. Mapeamos y abrimos el puerto automáticamente
-  "forwardPorts": [8080],
-  "portsAttributes": {
-    "8080": {
-      "label": "Tu Sitio WordPress",
-      "onAutoForward": "openPreview"
+  // 4. Aseguramos que tanto MariaDB como Apache se enciendan siempre al iniciar el Codespace
+  "postStartCommand": "sudo service mariadb start && sudo apache2ctl start",
+
+  // 5. Agregamos extensiones útiles directo al entorno de desarrollo
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ikappas.composer"
+      ]
     }
   }
 }
