@@ -1,11 +1,13 @@
 {
-  "name": "WordPress Master Env (Apache Nativo)",
+  "name": "EntornosVirtuales (Apache Nativo + Flask + Ollama)",
   
-  // 1. Usamos la imagen oficial de PHP recomendada en la documentación
-  "image": "mcr.microsoft.com/devcontainers/php:1-8.2-bullseye",
+  // 1. Cambiado a Bookworm para evitar errores de GPG viejos
+  // "image": "mcr.microsoft.com/devcontainers/php:1-8.2-bookworm",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
 
-
-  // NUEVO: Agregamos la "Feature" oficial para instalar Python de forma nativa e inyectarla en el contenedor de PHP
+  // 2. Características adicionales: Inyección aislada de Python 3
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "installTools": true,
@@ -13,36 +15,45 @@
     }
   },
 
+  // Limpieza crucial antes de que cualquier otra cosa corra apt-get
+  "onCreateCommand": "sudo rm -f /etc/apt/sources.list.d/yarn.list && sudo apt-get update",
 
-  // 2. Mapeamos el puerto 8080 para visualizar WordPress de forma automática
+  // 3. Mapeo y apertura automática de puertos (Agregado 11434 para Ollama)
   "forwardPorts": [
     8080,
-    5000
+    5000,
+    11434
   ],
-
-
   "portsAttributes": {
     "8080": {
-      "label": "Tu WordPress",
+      "label": "WordPress y PHP",
       "onAutoForward": "openPreview"
     },
     "5000": {
       "label": "Tu App de Flask (IA)",
       "onAutoForward": "silent"
+    },
+    "11434": {
+      "label": "Ollama API",
+      "onAutoForward": "silent"
     }
   },
 
-  // 3. Instalamos las herramientas necesarias e inicializamos la base de datos y la descarga de WP
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y mariadb-server php-mysql php-xml php-mbstring php-curl && sudo service mariadb start && sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS wordpress_db; CREATE USER IF NOT EXISTS 'wp_user'@'localhost' IDENTIFIED BY 'wp_password'; GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost'; FLUSH PRIVILEGES;\" && if [ ! -f wp-config-sample.php ]; then curl -O https://wordpress.org/latest.tar.gz && tar -xzf latest.tar.gz --strip-components=1 && rm latest.tar.gz; fi && sudo sed -i 's/Listen 80$/Listen 8080/' /etc/apache2/ports.conf && sudo sed -i 's/<VirtualHost \\* :80>/<VirtualHost \\* :8080>/' /etc/apache2/sites-enabled/000-default.conf && pip3 install flask requests",
+  // 4. Configuración automatizada post-creación: BD, WordPress, Apache y PIP (incluyendo librería ollama)
+  // Agregado '--break-system-packages' al final porque en Debian Bookworm Python exige este flag para usar pip de forma global con sudo
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y mariadb-server php-mysql php-xml php-mbstring php-curl && sudo service mariadb start && sudo mysql -u root -e \"CREATE DATABASE IF NOT EXISTS wordpress_db; CREATE USER IF NOT EXISTS 'wp_user'@'localhost' IDENTIFIED BY 'wp_password'; GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost'; FLUSH PRIVILEGES;\" && if [ ! -f wp-config-sample.php ]; then curl -O https://wordpress.org/latest.tar.gz && tar -xzf latest.tar.gz --strip-components=1 && rm latest.tar.gz; fi && sudo sed -i 's/Listen 80$/Listen 8080/' /etc/apache2/ports.conf && sudo sed -i 's/<VirtualHost \\*:80>/<VirtualHost \\*:8080>/' /etc/apache2/sites-enabled/000-default.conf && sudo pip3 install flask requests ollama --break-system-packages",
 
-  // 4. Aseguramos que tanto MariaDB como Apache se enciendan siempre al iniciar el Codespace
+  // 5. Garantía de inicio de servicios en cada arranque del Codespace
   "postStartCommand": "sudo service mariadb start && sudo apache2ctl start",
 
-  // 5. Agregamos extensiones útiles directo al entorno de desarrollo
+  // 6. Extensiones recomendadas para tu stack completo
   "customizations": {
     "vscode": {
       "extensions": [
-        "ikappas.composer"
+        "ikappas.composer",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "bmewburn.vscode-intelephense-client"
       ]
     }
   }

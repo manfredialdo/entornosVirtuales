@@ -29,7 +29,7 @@ def ask_ollama():
 
     try:
         # Hacemos la consulta a Ollama
-        response = requests.post(OLLAMA_API_URL, json=payload, timeout=30)
+        response = requests.post(OLLAMA_API_URL, json=payload, timeout=None)
         response.raise_for_status() # Lanza error si el status no es 200
         
         # Extraemos el texto de la respuesta de Ollama
